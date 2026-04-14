@@ -210,8 +210,16 @@ class Plugin
     public static function apiMembersList(array $payload = []): void
     {
         $pdo = PluginRegistry::getService('database');
-        $stmt = $pdo->query('SELECT id, email, created_at FROM users ORDER BY email ASC');
+        // Select all columns so other plugins (e.g. MailerLite) can add
+        // their own columns to the users table and have them show up here
+        $stmt = $pdo->query('SELECT * FROM users ORDER BY email ASC');
         $members = $stmt->fetchAll();
+
+        // Never expose password hashes to the frontend
+        foreach ($members as &$member) {
+            unset($member['password']);
+        }
+        unset($member);
         editor_json_response([
             'ok' => true,
             'members' => $members,

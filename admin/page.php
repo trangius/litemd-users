@@ -87,6 +87,10 @@
     background: #fef3f2;
 }
 
+/* Boolean column icons */
+.bool-yes { color: #16a34a; font-weight: 600; }
+.bool-no { color: #dc2626; font-weight: 600; }
+
 /* Dark mode overrides */
 [data-theme="dark"] .members-table th { background: var(--bg-raised); }
 [data-theme="dark"] .members-table th.sortable:hover { background: var(--bg-hover); }
@@ -102,7 +106,7 @@
 
     <div class="members-table-wrapper">
         <table class="members-table" id="members-table">
-            <thead>
+            <thead id="members-head">
                 <tr>
                     <th class="sortable" data-sort="email">Email <span class="sort-arrow"></span></th>
                     <th class="sortable" data-sort="created_at">Registered <span class="sort-arrow"></span></th>

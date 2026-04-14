@@ -1,12 +1,17 @@
 // Members list IIFE — loads and displays registered members in a sortable,
-// searchable table with delete functionality.
+// searchable table with delete functionality. Dynamically renders extra
+// columns added by other plugins (e.g. newsletter from MailerLite).
 (function () {
     "use strict";
 
     var config = window.EDITOR_CONFIG || {};
 
+    // Core columns that we always know about — everything else is "extra"
+    var CORE_FIELDS = ["id", "email", "password", "created_at"];
+
     var state = {
         members: [],
+        extraFields: [],
         sortField: "email",
         sortDir: "asc",
         searchQuery: "",
@@ -16,6 +21,7 @@
         statusMessage: document.getElementById("status-message"),
         membersCount: document.getElementById("members-count"),
         membersBody: document.getElementById("members-body"),
+        membersHead: document.getElementById("members-head"),
         membersTable: document.getElementById("members-table"),
         membersSearch: document.getElementById("members-search"),
     };
@@ -25,6 +31,87 @@
     var apiGet = EditorUtils.apiGet;
     var apiPost = EditorUtils.apiPost;
     var handleError = EditorUtils.handleError;
+
+    // ----------------------------------------------------------------------------
+    // Detect extra columns from the first member row (fields not in CORE_FIELDS).
+    // ----------------------------------------------------------------------------
+    function detectExtraFields(members) {
+        if (members.length === 0) return [];
+        var extra = [];
+        var first = members[0];
+        for (var key in first) {
+            if (first.hasOwnProperty(key) && CORE_FIELDS.indexOf(key) === -1) {
+                extra.push(key);
+            }
+        }
+        return extra;
+    }
+
+    // ----------------------------------------------------------------------------
+    // Check if a field looks like a boolean (all values are 0, 1, or null).
+    // ----------------------------------------------------------------------------
+    function isBoolField(members, field) {
+        for (var i = 0; i < members.length; i++) {
+            var val = members[i][field];
+            if (val !== 0 && val !== 1 && val !== "0" && val !== "1" && val !== null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // ----------------------------------------------------------------------------
+    // Render a cell value — booleans get check/cross icons, others show as text.
+    // ----------------------------------------------------------------------------
+    function renderCell(value, isBool) {
+        if (isBool) {
+            if (value === 1 || value === "1") {
+                return '<span class="bool-yes">\u2713</span>';
+            }
+            return '<span class="bool-no">\u2717</span>';
+        }
+        return escapeHtml(String(value ?? ""));
+    }
+
+    // ----------------------------------------------------------------------------
+    // Turn a field name into a display label (e.g. "newsletter" → "Newsletter").
+    // ----------------------------------------------------------------------------
+    function fieldLabel(field) {
+        return field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, " ");
+    }
+
+    // ----------------------------------------------------------------------------
+    // Build the table header row with core + extra columns.
+    // ----------------------------------------------------------------------------
+    function renderHeader() {
+        var html = '<tr>';
+        html += '<th class="sortable" data-sort="email">Email <span class="sort-arrow"></span></th>';
+
+        // Extra columns between Email and Registered
+        for (var i = 0; i < state.extraFields.length; i++) {
+            var field = state.extraFields[i];
+            html += '<th class="sortable" data-sort="' + escapeHtml(field) + '">' + escapeHtml(fieldLabel(field)) + ' <span class="sort-arrow"></span></th>';
+        }
+
+        html += '<th class="sortable" data-sort="created_at">Registered <span class="sort-arrow"></span></th>';
+        html += '<th></th>';
+        html += '</tr>';
+        elements.membersHead.innerHTML = html;
+
+        // Re-bind sort click handlers on the new header
+        elements.membersTable.querySelectorAll("th.sortable").forEach(function (th) {
+            th.addEventListener("click", function () {
+                var field = th.getAttribute("data-sort");
+                if (state.sortField === field) {
+                    state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+                } else {
+                    state.sortField = field;
+                    state.sortDir = "asc";
+                }
+                renderTable();
+            });
+        });
+    }
 
     // ----------------------------------------------------------------------------
     // Filter members by the current search query against email addresses.
@@ -45,8 +132,20 @@
         var dir = state.sortDir === "asc" ? 1 : -1;
 
         members.sort(function (a, b) {
-            var aVal = a[field] || "";
-            var bVal = b[field] || "";
+            var aVal = a[field];
+            var bVal = b[field];
+
+            // Null-safe comparison
+            if (aVal == null) aVal = "";
+            if (bVal == null) bVal = "";
+
+            // Numeric comparison for numbers and booleans
+            if (typeof aVal === "number" && typeof bVal === "number") {
+                return (aVal - bVal) * dir;
+            }
+
+            aVal = String(aVal);
+            bVal = String(bVal);
 
             if (field === "created_at") {
                 return (aVal < bVal ? -1 : aVal > bVal ? 1 : 0) * dir;
@@ -63,6 +162,7 @@
     // ----------------------------------------------------------------------------
     function renderTable() {
         var visible = sortMembers(filteredMembers());
+        var totalCols = 3 + state.extraFields.length;
 
         // Show count with search context
         var total = state.members.length;
@@ -85,6 +185,12 @@
             }
         });
 
+        // Detect which extra fields are boolean
+        var boolFields = {};
+        for (var f = 0; f < state.extraFields.length; f++) {
+            boolFields[state.extraFields[f]] = isBoolField(state.members, state.extraFields[f]);
+        }
+
         // Build table rows
         var html = "";
         for (var i = 0; i < visible.length; i++) {
@@ -93,41 +199,36 @@
 
             html += "<tr>";
             html += "<td>" + escapeHtml(m.email) + "</td>";
+
+            // Extra columns
+            for (var j = 0; j < state.extraFields.length; j++) {
+                var key = state.extraFields[j];
+                html += "<td>" + renderCell(m[key], boolFields[key]) + "</td>";
+            }
+
             html += "<td>" + escapeHtml(date) + "</td>";
             html += '<td><button type="button" class="member-delete-btn" data-member-id="' + m.id + '" data-member-email="' + escapeHtml(m.email) + '">Delete</button></td>';
             html += "</tr>";
         }
 
-        elements.membersBody.innerHTML = html || '<tr><td colspan="3" class="empty-row">No members found.</td></tr>';
+        elements.membersBody.innerHTML = html || '<tr><td colspan="' + totalCols + '" class="empty-row">No members found.</td></tr>';
     }
 
     // ----------------------------------------------------------------------------
-    // Load the members list from the API and render the table.
+    // Load the members list from the API, detect extra fields, and render.
     // ----------------------------------------------------------------------------
     async function loadMembers() {
         var response = await apiGet({ action: "members-list" });
         state.members = Array.isArray(response.members) ? response.members : [];
+        state.extraFields = detectExtraFields(state.members);
+        renderHeader();
         renderTable();
     }
 
     // ----------------------------------------------------------------------------
-    // Bind event handlers for sorting, searching, and deleting.
+    // Bind event handlers for searching and deleting.
     // ----------------------------------------------------------------------------
     function bindEvents() {
-        // Column header sort
-        elements.membersTable.querySelectorAll("th.sortable").forEach(function (th) {
-            th.addEventListener("click", function () {
-                var field = th.getAttribute("data-sort");
-                if (state.sortField === field) {
-                    state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
-                } else {
-                    state.sortField = field;
-                    state.sortDir = "asc";
-                }
-                renderTable();
-            });
-        });
-
         // Search input
         elements.membersSearch.addEventListener("input", function () {
             state.searchQuery = elements.membersSearch.value.trim().toLowerCase();
