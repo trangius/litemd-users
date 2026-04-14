@@ -106,7 +106,7 @@ class Plugin
         // Admin page for member management
         PluginRegistry::addAdminPage([
             'slug'        => 'members',
-            'label'       => 'Members',
+            'label'       => 'Users',
             'icon'        => '<circle cx="10" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4 17v-1a6 6 0 0 1 12 0v1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
             'file'        => __DIR__ . '/admin/page.php',
             'scripts'     => ['../plugins/users/admin/page.js'],
