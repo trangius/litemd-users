@@ -207,7 +207,10 @@
             }
 
             html += "<td>" + escapeHtml(date) + "</td>";
-            html += '<td><button type="button" class="member-delete-btn" data-member-id="' + m.id + '" data-member-email="' + escapeHtml(m.email) + '">Delete</button></td>';
+            html += '<td>'
+                + '<button type="button" class="member-setpw-btn" data-member-id="' + m.id + '" data-member-email="' + escapeHtml(m.email) + '">Set Password</button> '
+                + '<button type="button" class="member-delete-btn" data-member-id="' + m.id + '" data-member-email="' + escapeHtml(m.email) + '">Delete</button>'
+                + '</td>';
             html += "</tr>";
         }
 
@@ -233,6 +236,28 @@
         elements.membersSearch.addEventListener("input", function () {
             state.searchQuery = elements.membersSearch.value.trim().toLowerCase();
             renderTable();
+        });
+
+        // Set password (delegated to tbody)
+        elements.membersBody.addEventListener("click", function (e) {
+            var btn = e.target.closest(".member-setpw-btn");
+            if (!btn) return;
+
+            var id = parseInt(btn.dataset.memberId, 10);
+            var email = btn.dataset.memberEmail || "";
+            var password = window.prompt("New password for \"" + email + "\" (min 8 characters):");
+
+            if (!password) return;
+            if (password.length < 8) {
+                alert("Password must be at least 8 characters.");
+                return;
+            }
+
+            apiPost("member-set-password", { id: id, password: password, csrf: config.csrfToken || "" }).then(function () {
+                alert("Password updated for " + email + ".");
+            }).catch(function (err) {
+                handleError(err);
+            });
         });
 
         // Delete member (delegated to tbody)

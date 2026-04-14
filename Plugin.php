@@ -116,6 +116,7 @@ class Plugin
         // Admin API actions for member management
         PluginRegistry::addApiAction('members-list', [self::class, 'apiMembersList'], 'GET');
         PluginRegistry::addApiAction('member-delete', [self::class, 'apiMemberDelete'], 'POST');
+        PluginRegistry::addApiAction('member-set-password', [self::class, 'apiMemberSetPassword'], 'POST');
     }
 
     // ========================================================================
@@ -159,6 +160,17 @@ class Plugin
         if ($action === 'logout') {
             Auth::logout();
             Http::jsonResponse(['ok' => true]);
+        }
+
+        if ($action === 'change-password') {
+            if (!Auth::isLoggedIn()) {
+                Http::jsonResponse(['ok' => false, 'error' => 'Not logged in.'], 401);
+            }
+            $result = Auth::changePassword(
+                (string) ($payload['current_password'] ?? ''),
+                (string) ($payload['new_password'] ?? '')
+            );
+            Http::jsonResponse($result, $result['ok'] ? 200 : 400);
         }
 
         if ($action === 'delete-account') {
@@ -244,6 +256,37 @@ class Plugin
             return;
         }
         editor_log('Deleted member #' . $id);
+        editor_json_response(['ok' => true, 'id' => $id]);
+    }
+
+    // ----------------------------------------------------------------------------
+    // Set a new password for a member by ID.
+    // ----------------------------------------------------------------------------
+    public static function apiMemberSetPassword(array $payload = []): void
+    {
+        $id = (int) ($payload['id'] ?? 0);
+        $password = (string) ($payload['password'] ?? '');
+
+        if ($id <= 0) {
+            editor_error_response('Invalid member ID.', 400, 'setting password');
+            return;
+        }
+        if (strlen($password) < 8) {
+            editor_error_response('Password must be at least 8 characters.', 400, 'setting password');
+            return;
+        }
+
+        $pdo = PluginRegistry::getService('database');
+        $hash = password_hash($password, PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare('UPDATE users SET password = ? WHERE id = ?');
+        $stmt->execute([$hash, $id]);
+
+        if ($stmt->rowCount() === 0) {
+            editor_error_response('Member not found.', 404, 'setting password for member #' . $id);
+            return;
+        }
+
+        editor_log('Set password for member #' . $id);
         editor_json_response(['ok' => true, 'id' => $id]);
     }
 }

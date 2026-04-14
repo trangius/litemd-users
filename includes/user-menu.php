@@ -19,6 +19,20 @@
                     <div class="auth-dropdown-logged-in">
                         <p class="auth-user-email"><?= htmlspecialchars($currentUser['email'] ?? '', ENT_QUOTES, 'UTF-8') ?></p>
 <?php \LiteMD\Plugin::renderSlot('auth-dropdown-extras', ['currentUser' => $currentUser ?? null]); ?>
+                        <button type="button" class="auth-changepw-toggle">Change password</button>
+
+                        <!-- Change password form (hidden by default) -->
+                        <form class="auth-changepw-form" hidden novalidate>
+                            <div class="auth-form-row">
+                                <input type="password" name="current_password" placeholder="Current password" required autocomplete="current-password">
+                            </div>
+                            <div class="auth-form-row">
+                                <input type="password" name="new_password" placeholder="New password (min 8 chars)" required autocomplete="new-password" minlength="8">
+                            </div>
+                            <p class="auth-error" aria-live="polite"></p>
+                            <button type="submit" class="auth-submit-btn">Update password</button>
+                        </form>
+
                         <button type="button" class="auth-logout-btn">Log out</button>
                         <button type="button" class="auth-remove-btn">Remove account</button>
                     </div>
@@ -49,6 +63,10 @@
                         <div class="auth-form-row">
                             <label class="visually-hidden" for="register-password">Password</label>
                             <input type="password" name="password" id="register-password" placeholder="Password (min 8 chars)" required autocomplete="new-password" minlength="8">
+                        </div>
+                        <div class="auth-form-row">
+                            <label class="visually-hidden" for="register-password-confirm">Confirm password</label>
+                            <input type="password" name="password_confirm" id="register-password-confirm" placeholder="Confirm password" required autocomplete="new-password" minlength="8">
                         </div>
                         <p class="auth-error" aria-live="polite"></p>
                         <button type="submit" class="auth-submit-btn">Create account</button>

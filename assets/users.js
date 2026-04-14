@@ -71,6 +71,14 @@
                     var submitBtn = form.querySelector('.auth-submit-btn');
 
                     errorEl.textContent = '';
+
+                    // Check confirm-password match on registration
+                    var confirmInput = form.querySelector('[name="password_confirm"]');
+                    if (confirmInput && password !== confirmInput.value) {
+                        errorEl.textContent = 'Passwords do not match.';
+                        return;
+                    }
+
                     submitBtn.disabled = true;
 
                     authRequest(action, { email: email, password: password })
@@ -97,6 +105,54 @@
                     authRequest('logout')
                     .then(function () { window.location.reload(); })
                     .catch(function () { window.location.reload(); });
+                });
+            }
+
+            // Handle change password toggle and form
+            var changePwToggle = dd.querySelector('.auth-changepw-toggle');
+            var changePwForm = dd.querySelector('.auth-changepw-form');
+            if (changePwToggle && changePwForm) {
+                changePwToggle.addEventListener('click', function () {
+                    var isVisible = !changePwForm.hidden;
+                    changePwForm.hidden = isVisible;
+                    if (!isVisible) {
+                        changePwForm.querySelector('[name="current_password"]').focus();
+                    }
+                });
+
+                changePwForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    var currentPw = changePwForm.querySelector('[name="current_password"]').value;
+                    var newPw = changePwForm.querySelector('[name="new_password"]').value;
+                    var errorEl = changePwForm.querySelector('.auth-error');
+                    var submitBtn = changePwForm.querySelector('.auth-submit-btn');
+
+                    errorEl.textContent = '';
+
+                    if (newPw.length < 8) {
+                        errorEl.textContent = 'New password must be at least 8 characters.';
+                        return;
+                    }
+
+                    submitBtn.disabled = true;
+
+                    authRequest('change-password', { current_password: currentPw, new_password: newPw })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        submitBtn.disabled = false;
+                        if (data.ok) {
+                            changePwForm.reset();
+                            changePwForm.hidden = true;
+                            errorEl.textContent = '';
+                            alert('Password updated.');
+                        } else {
+                            errorEl.textContent = data.error || 'Something went wrong.';
+                        }
+                    })
+                    .catch(function () {
+                        submitBtn.disabled = false;
+                        errorEl.textContent = 'Network error. Please try again.';
+                    });
                 });
             }
 

@@ -158,6 +158,11 @@ body.theme-dark .auth-dropdown {
     word-break: break-all;
 }
 
+.auth-changepw-form {
+    margin-bottom: 0.5rem;
+}
+
+.auth-changepw-toggle,
 .auth-logout-btn {
     width: 100%;
     padding: 0.5rem;
@@ -170,8 +175,13 @@ body.theme-dark .auth-dropdown {
     transition: background-color var(--transition-speed);
 }
 
+.auth-changepw-toggle:hover,
 .auth-logout-btn:hover {
     background-color: var(--border);
+}
+
+.auth-changepw-toggle {
+    margin-bottom: 0.5rem;
 }
 
 .auth-remove-btn {

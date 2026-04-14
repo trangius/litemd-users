@@ -132,6 +132,46 @@ final class Auth
     }
 
     // ----------------------------------------------------------------------------
+    // Change the current user's password. Requires the current password for
+    // verification before updating.
+    // ----------------------------------------------------------------------------
+    public static function changePassword(string $currentPassword, string $newPassword): array
+    {
+        if (!self::isLoggedIn()) {
+            return ['ok' => false, 'error' => 'Not logged in.'];
+        }
+
+        if ($currentPassword === '' || $newPassword === '') {
+            return ['ok' => false, 'error' => 'Both current and new password are required.'];
+        }
+
+        if (strlen($newPassword) < 8) {
+            return ['ok' => false, 'error' => 'New password must be at least 8 characters.'];
+        }
+
+        $pdo = PluginRegistry::getService('database');
+        if (!$pdo) {
+            return ['ok' => false, 'error' => 'Database not available.'];
+        }
+
+        // Verify the current password
+        $stmt = $pdo->prepare('SELECT password FROM users WHERE id = ?');
+        $stmt->execute([$_SESSION['user_id']]);
+        $user = $stmt->fetch();
+
+        if (!is_array($user) || !password_verify($currentPassword, $user['password'])) {
+            return ['ok' => false, 'error' => 'Current password is incorrect.'];
+        }
+
+        // Update to the new password
+        $hash = password_hash($newPassword, PASSWORD_BCRYPT);
+        $stmt = $pdo->prepare('UPDATE users SET password = ? WHERE id = ?');
+        $stmt->execute([$hash, $_SESSION['user_id']]);
+
+        return ['ok' => true];
+    }
+
+    // ----------------------------------------------------------------------------
     // Delete the currently logged-in user's account from the database.
     // ----------------------------------------------------------------------------
     public static function deleteCurrentUser(): void

@@ -74,6 +74,18 @@
     color: var(--text-placeholder);
     padding: 2rem 1rem;
 }
+.member-setpw-btn {
+    font-size: 0.78rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg-surface);
+    color: var(--text-heading);
+    cursor: pointer;
+}
+.member-setpw-btn:hover {
+    background: #f0f4ff;
+}
 .member-delete-btn {
     font-size: 0.78rem;
     padding: 0.2rem 0.5rem;
@@ -95,6 +107,8 @@
 [data-theme="dark"] .members-table th { background: var(--bg-raised); }
 [data-theme="dark"] .members-table th.sortable:hover { background: var(--bg-hover); }
 [data-theme="dark"] .members-table tr:hover td { background: var(--bg-hover); }
+[data-theme="dark"] .member-setpw-btn { background: var(--bg-surface); }
+[data-theme="dark"] .member-setpw-btn:hover { background: var(--bg-hover); }
 [data-theme="dark"] .member-delete-btn { background: var(--bg-surface); }
 </style>
 
