@@ -1,0 +1,192 @@
+/* ===================================
+   User Auth Menu (Users plugin)
+   =================================== */
+.user-menu-wrapper {
+    position: relative;
+}
+
+.user-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    background-color: transparent;
+    color: var(--text);
+    transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
+.user-btn:hover {
+    background-color: var(--background-alt);
+    color: var(--primary-dark);
+}
+
+body.theme-dark .user-btn:hover {
+    color: var(--primary-light);
+}
+
+.user-btn:focus-visible {
+    outline: 2px solid var(--primary-base);
+    outline-offset: 2px;
+}
+
+.user-icon {
+    width: 1.35rem;
+    height: 1.35rem;
+}
+
+.user-logged-in-dot {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #22c55e;
+    border: 2px solid var(--background);
+}
+
+.auth-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    width: 280px;
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: var(--spacing-md);
+    z-index: 2000;
+}
+
+.auth-dropdown[aria-hidden="false"] {
+    display: block;
+}
+
+body.theme-dark .auth-dropdown {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.auth-dropdown h3 {
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-sm);
+}
+
+.auth-form-row {
+    margin-bottom: var(--spacing-xs);
+}
+
+.auth-form-row input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+    font-family: var(--font-body);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    background-color: var(--background);
+    color: var(--text);
+    transition: border-color var(--transition-speed);
+}
+
+.auth-form-row input:focus {
+    outline: none;
+    border-color: var(--primary-base);
+}
+
+.auth-error {
+    color: #dc2626;
+    font-size: 0.85rem;
+    min-height: 1.25rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.auth-submit-btn {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    background-color: var(--primary-base);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+}
+
+.auth-submit-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.auth-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.auth-switch {
+    text-align: center;
+    font-size: 0.85rem;
+    margin-top: var(--spacing-sm);
+    margin-bottom: 0;
+    color: var(--text-light);
+}
+
+.auth-switch-btn {
+    color: var(--primary-base);
+    font-size: 0.85rem;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.auth-switch-btn:hover {
+    color: var(--primary-dark);
+}
+
+.auth-dropdown-logged-in {
+    text-align: center;
+}
+
+.auth-user-email {
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: var(--spacing-sm);
+    word-break: break-all;
+}
+
+.auth-logout-btn {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text);
+    background-color: var(--background-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color var(--transition-speed);
+}
+
+.auth-logout-btn:hover {
+    background-color: var(--border);
+}
+
+.auth-remove-btn {
+    width: 100%;
+    padding: 0.4rem;
+    font-size: 0.8rem;
+    color: #b42318;
+    background-color: transparent;
+    border: 1px solid #d92d20;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: background-color var(--transition-speed);
+}
+
+.auth-remove-btn:hover {
+    background-color: #fef3f2;
+}
