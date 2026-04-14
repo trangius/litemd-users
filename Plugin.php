@@ -78,7 +78,8 @@ class Plugin
         // Start session so auth state is available
         Auth::start();
 
-        $base = BasePath::detect();
+        // Strip /admin suffix so asset URLs are correct on both public and admin pages
+        $base = BasePath::detect('/admin');
 
         // Register the 'auth' service so core can check login state
         PluginRegistry::addService('auth', function () {

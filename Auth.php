@@ -125,6 +125,9 @@ final class Auth
         session_regenerate_id(true);
         $_SESSION['user_id'] = $userId;
 
+        // Notify other plugins (e.g. Newsletter) about the new user
+        PluginRegistry::renderSlot('user-registered', ['user_id' => $userId, 'email' => $email]);
+
         return ['ok' => true];
     }
 
