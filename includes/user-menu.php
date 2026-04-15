@@ -51,6 +51,20 @@
                         <p class="auth-error" aria-live="polite"></p>
                         <button type="submit" class="auth-submit-btn">Log in</button>
                         <p class="auth-switch">No account? <button type="button" class="auth-switch-btn" data-show="register">Create one</button></p>
+                        <p class="auth-switch"><button type="button" class="auth-switch-btn" data-show="forgot-password">Forgot password?</button></p>
+                    </form>
+
+                    <!-- Forgot password form -->
+                    <form class="auth-form" data-auth-form="forgot-password" hidden novalidate>
+                        <h3>Reset password</h3>
+                        <p class="auth-forgot-desc">Enter your email and we'll send a reset link.</p>
+                        <div class="auth-form-row">
+                            <label class="visually-hidden" for="forgot-email">Email</label>
+                            <input type="email" name="email" id="forgot-email" placeholder="Email" required autocomplete="email">
+                        </div>
+                        <p class="auth-error" aria-live="polite"></p>
+                        <button type="submit" class="auth-submit-btn">Send reset link</button>
+                        <p class="auth-switch"><button type="button" class="auth-switch-btn" data-show="login">Back to login</button></p>
                     </form>
 
                     <!-- Register form -->

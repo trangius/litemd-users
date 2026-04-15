@@ -78,6 +78,9 @@ class Plugin
         // Start session so auth state is available
         Auth::start();
 
+        // Ensure reset_token columns exist (one-time migration)
+        Auth::ensureResetColumns();
+
         // Strip /admin suffix so asset URLs are correct on both public and admin pages
         $base = BasePath::detect('/admin');
 
@@ -113,10 +116,22 @@ class Plugin
             'description' => 'View and manage registered members.',
         ]);
 
+        // Public route for the password reset page
+        PluginRegistry::addRoute('/reset-password', [self::class, 'handleResetPasswordPage']);
+
         // Admin API actions for member management
         PluginRegistry::addApiAction('members-list', [self::class, 'apiMembersList'], 'GET');
         PluginRegistry::addApiAction('member-delete', [self::class, 'apiMemberDelete'], 'POST');
         PluginRegistry::addApiAction('member-set-password', [self::class, 'apiMemberSetPassword'], 'POST');
+
+        // SMTP settings under Advanced tab
+        PluginRegistry::addAdvancedTab([
+            'slug'  => 'users-smtp',
+            'label' => 'Users',
+            'file'  => __DIR__ . '/admin/settings.php',
+        ]);
+        PluginRegistry::addApiAction('users-smtp-save', [self::class, 'apiSmtpSave'], 'POST');
+        PluginRegistry::addApiAction('users-smtp-test', [self::class, 'apiSmtpTest'], 'POST');
     }
 
     // ========================================================================
@@ -182,6 +197,19 @@ class Plugin
             Http::jsonResponse(['ok' => true]);
         }
 
+        if ($action === 'forgot-password') {
+            $result = Auth::forgotPassword((string) ($payload['email'] ?? ''));
+            Http::jsonResponse($result);
+        }
+
+        if ($action === 'reset-password') {
+            $result = Auth::resetPassword(
+                (string) ($payload['token'] ?? ''),
+                (string) ($payload['new_password'] ?? '')
+            );
+            Http::jsonResponse($result, $result['ok'] ? 200 : 400);
+        }
+
         if ($action === 'status') {
             $user = Auth::currentUser();
             Http::jsonResponse([
@@ -227,9 +255,9 @@ class Plugin
         $stmt = $pdo->query('SELECT * FROM users ORDER BY email ASC');
         $members = $stmt->fetchAll();
 
-        // Never expose password hashes to the frontend
+        // Never expose password hashes or reset tokens to the frontend
         foreach ($members as &$member) {
-            unset($member['password']);
+            unset($member['password'], $member['reset_token'], $member['reset_token_expires_at']);
         }
         unset($member);
         editor_json_response([
@@ -271,13 +299,13 @@ class Plugin
             editor_error_response('Invalid member ID.', 400, 'setting password');
             return;
         }
-        if (strlen($password) < 8) {
-            editor_error_response('Password must be at least 8 characters.', 400, 'setting password');
+        if (strlen($password) < Auth::MIN_PASSWORD_LENGTH) {
+            editor_error_response('Password must be at least ' . Auth::MIN_PASSWORD_LENGTH . ' characters.', 400, 'setting password');
             return;
         }
 
         $pdo = PluginRegistry::getService('database');
-        $hash = password_hash($password, PASSWORD_BCRYPT);
+        $hash = Auth::hashPassword($password);
         $stmt = $pdo->prepare('UPDATE users SET password = ? WHERE id = ?');
         $stmt->execute([$hash, $id]);
 
@@ -288,5 +316,95 @@ class Plugin
 
         editor_log('Set password for member #' . $id);
         editor_json_response(['ok' => true, 'id' => $id]);
+    }
+
+    // ========================================================================
+    // Password reset page (public)
+    // ========================================================================
+
+    // ----------------------------------------------------------------------------
+    // Serve the standalone reset-password HTML page at /reset-password?token=...
+    // ----------------------------------------------------------------------------
+    public static function handleResetPasswordPage(): void
+    {
+        $token = (string) ($_GET['token'] ?? '');
+        $basePath = BasePath::detect();
+        $baseHref = rtrim($basePath, '/') . '/';
+        $siteName = \LiteMD\Config::get('site_name', 'LiteMD');
+
+        // Collect theme CSS hrefs for consistent styling
+        $cssHrefs = [];
+        if (class_exists('\\LiteMD\\Theme')) {
+            \LiteMD\Theme::initFromConfig();
+            $cssHrefs = \LiteMD\Theme::collectCssHrefs($basePath);
+        }
+
+        include __DIR__ . '/includes/reset-password-page.php';
+    }
+
+    // ========================================================================
+    // SMTP settings API handlers
+    // ========================================================================
+
+    // ----------------------------------------------------------------------------
+    // Save SMTP settings to config.php under plugins.users.smtp.
+    // ----------------------------------------------------------------------------
+    public static function apiSmtpSave(array $payload = []): void
+    {
+        $smtp = [
+            'host'         => trim((string) ($payload['host'] ?? '')),
+            'port'         => (int) ($payload['port'] ?? 587),
+            'encryption'   => (string) ($payload['encryption'] ?? 'tls'),
+            'username'     => trim((string) ($payload['username'] ?? '')),
+            'password'     => (string) ($payload['password'] ?? ''),
+            'from_email'   => trim((string) ($payload['from_email'] ?? '')),
+            'from_name'    => trim((string) ($payload['from_name'] ?? '')),
+            'email_footer' => trim((string) ($payload['email_footer'] ?? '')),
+        ];
+
+        if ($smtp['host'] === '') {
+            editor_error_response('SMTP host is required.', 400, 'saving SMTP settings');
+            return;
+        }
+        if ($smtp['from_email'] === '') {
+            editor_error_response('From email is required.', 400, 'saving SMTP settings');
+            return;
+        }
+
+        save_config(editor_content_dir(), function (array &$config) use ($smtp) {
+            if (!isset($config['plugins'])) {
+                $config['plugins'] = [];
+            }
+            if (!isset($config['plugins']['users'])) {
+                $config['plugins']['users'] = [];
+            }
+            $config['plugins']['users']['smtp'] = $smtp;
+        }, 'Updated SMTP settings');
+
+        editor_json_response(['ok' => true]);
+    }
+
+    // ----------------------------------------------------------------------------
+    // Send a test email to verify SMTP settings work.
+    // ----------------------------------------------------------------------------
+    public static function apiSmtpTest(array $payload = []): void
+    {
+        $testEmail = trim((string) ($payload['test_email'] ?? ''));
+        if ($testEmail === '') {
+            editor_error_response('Test email address is required.', 400, 'sending test email');
+            return;
+        }
+
+        require_once __DIR__ . '/Mailer.php';
+
+        try {
+            $siteName = \LiteMD\Config::get('site_name', 'LiteMD');
+            Mailer::send($testEmail, 'Test email from ' . $siteName, '<p>If you can read this, SMTP is working correctly.</p>');
+        } catch (\Throwable $e) {
+            editor_error_response($e->getMessage(), 500, 'sending test email');
+            return;
+        }
+
+        editor_json_response(['ok' => true]);
     }
 }

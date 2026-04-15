@@ -7,7 +7,7 @@
     var config = window.EDITOR_CONFIG || {};
 
     // Core columns that we always know about — everything else is "extra"
-    var CORE_FIELDS = ["id", "email", "password", "created_at"];
+    var CORE_FIELDS = ["id", "email", "password", "created_at", "reset_token", "reset_token_expires_at"];
 
     var state = {
         members: [],

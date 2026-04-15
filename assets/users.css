@@ -96,6 +96,12 @@ body.theme-dark .auth-dropdown {
     border-color: var(--primary-base);
 }
 
+.auth-forgot-desc {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-bottom: var(--spacing-sm);
+}
+
 .auth-error {
     color: #dc2626;
     font-size: 0.85rem;

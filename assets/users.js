@@ -60,17 +60,48 @@
                 }
             });
 
-            // Handle login and register form submissions
+            // Handle login, register, and forgot-password form submissions
             dd.querySelectorAll('.auth-form').forEach(function (form) {
                 form.addEventListener('submit', function (e) {
                     e.preventDefault();
                     var action = form.getAttribute('data-auth-form');
                     var email = form.querySelector('[name="email"]').value.trim();
-                    var password = form.querySelector('[name="password"]').value;
                     var errorEl = form.querySelector('.auth-error');
                     var submitBtn = form.querySelector('.auth-submit-btn');
 
                     errorEl.textContent = '';
+
+                    // Forgot-password: send email only, show confirmation instead of reload
+                    if (action === 'forgot-password') {
+                        if (!email) { errorEl.textContent = 'Please enter your email.'; return; }
+                        submitBtn.disabled = true;
+                        authRequest('forgot-password', { email: email })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            submitBtn.disabled = false;
+                            if (data.ok) {
+                                form.innerHTML = '<h3>Check your email</h3>'
+                                    + '<p style="font-size:0.9rem;color:var(--text-light)">If an account exists for '
+                                    + email + ', we sent a password reset link.</p>'
+                                    + '<p class="auth-switch"><button type="button" class="auth-switch-btn" data-show="login">Back to login</button></p>';
+                                // Re-bind the new switch button
+                                form.querySelector('.auth-switch-btn').addEventListener('click', function () {
+                                    window.location.reload();
+                                });
+                            } else {
+                                errorEl.textContent = data.error || 'Something went wrong.';
+                            }
+                        })
+                        .catch(function () {
+                            submitBtn.disabled = false;
+                            errorEl.textContent = 'Network error. Please try again.';
+                        });
+                        return;
+                    }
+
+                    // Password field (not present on forgot-password form)
+                    var passwordInput = form.querySelector('[name="password"]');
+                    var password = passwordInput ? passwordInput.value : '';
 
                     // Check confirm-password match on registration
                     var confirmInput = form.querySelector('[name="password_confirm"]');
