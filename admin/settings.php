@@ -5,9 +5,22 @@ $smtp = $usersConfig['smtp'] ?? [];
 ?>
 
             <div class="advanced-form" style="max-width:500px;padding:1.25rem">
-                <h2 class="advanced-section-title" style="margin-top:0">SMTP Settings</h2>
+                <h2 class="advanced-section-title" style="margin-top:0">Email Settings</h2>
                 <p class="advanced-section-desc">Configure outgoing email for password resets and notifications.</p>
 
+                <label class="advanced-field" style="flex-direction:row;align-items:center;gap:0.5rem">
+                    <input type="checkbox" id="users-smtp-use-api" <?= !empty($smtp['use_api']) ? 'checked' : '' ?>>
+                    <span class="advanced-label" style="margin:0">Use MailerSend Web API</span>
+                </label>
+
+                <div id="users-api-fields" style="<?= empty($smtp['use_api']) ? 'display:none' : '' ?>">
+                    <label class="advanced-field">
+                        <span class="advanced-label">API Key</span>
+                        <input type="password" id="users-smtp-api-key" class="advanced-input" placeholder="mlsn.abc123..." value="<?= htmlspecialchars((string) ($smtp['api_key'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                    </label>
+                </div>
+
+                <div id="users-smtp-fields">
                 <label class="advanced-field">
                     <span class="advanced-label">SMTP Host</span>
                     <input type="text" id="users-smtp-host" class="advanced-input" placeholder="smtp.example.com" value="<?= htmlspecialchars((string) ($smtp['host'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
@@ -36,6 +49,7 @@ $smtp = $usersConfig['smtp'] ?? [];
                     <span class="advanced-label">Password</span>
                     <input type="password" id="users-smtp-password" class="advanced-input" value="<?= htmlspecialchars((string) ($smtp['password'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
                 </label>
+                </div>
 
                 <label class="advanced-field">
                     <span class="advanced-label">From Email</span>
@@ -84,7 +98,19 @@ $smtp = $usersConfig['smtp'] ?? [];
     var testBtn = document.getElementById("users-smtp-test");
     var footerInput = document.getElementById("users-smtp-email-footer");
     var previewEl = document.getElementById("users-email-preview");
+    var useApiCheckbox = document.getElementById("users-smtp-use-api");
+    var apiFields = document.getElementById("users-api-fields");
+    var smtpFields = document.getElementById("users-smtp-fields");
     if (!saveBtn) return;
+
+    // Toggle API key vs SMTP fields based on checkbox
+    function toggleApiFields() {
+        var useApi = useApiCheckbox.checked;
+        apiFields.style.display = useApi ? "" : "none";
+        smtpFields.style.display = useApi ? "none" : "";
+    }
+    useApiCheckbox.addEventListener("change", toggleApiFields);
+    toggleApiFields();
 
     // Render the email preview with the current site name and footer text
     var siteName = <?= json_encode(\LiteMD\Config::get('site_name', 'Your Site'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
@@ -104,6 +130,8 @@ $smtp = $usersConfig['smtp'] ?? [];
     // Save SMTP settings
     saveBtn.addEventListener("click", function () {
         EditorUtils.apiPost("users-smtp-save", {
+            use_api: useApiCheckbox.checked,
+            api_key: document.getElementById("users-smtp-api-key").value,
             host: document.getElementById("users-smtp-host").value,
             port: parseInt(document.getElementById("users-smtp-port").value, 10) || 587,
             encryption: document.getElementById("users-smtp-encryption").value,

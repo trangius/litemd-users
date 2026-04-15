@@ -14,14 +14,27 @@ use LiteMD\Config;
 final class Mailer
 {
     // ----------------------------------------------------------------------------
-    // Send an HTML email using the SMTP settings from config.
-    // Returns true on success, throws RuntimeException on failure.
+    // Send an HTML email. Uses the MailerSend HTTP API if use_api is enabled,
+    // otherwise sends via direct SMTP. Returns true on success, throws
+    // RuntimeException on failure.
     // ----------------------------------------------------------------------------
     public static function send(string $to, string $subject, string $htmlBody): bool
     {
         $cfg = self::getSmtpConfig();
 
-        if ($cfg['host'] === '' || $cfg['from_email'] === '') {
+        if ($cfg['from_email'] === '') {
+            throw new \RuntimeException('From email is not configured. Go to Advanced > Users to set it up.');
+        }
+
+        // Use MailerSend HTTP API when the checkbox is enabled
+        if ($cfg['use_api']) {
+            if ($cfg['api_key'] === '') {
+                throw new \RuntimeException('MailerSend API key is required when Web API is enabled.');
+            }
+            return self::sendViaApi($to, $subject, $htmlBody, $cfg);
+        }
+
+        if ($cfg['host'] === '') {
             throw new \RuntimeException('SMTP is not configured. Go to Advanced > Users to set it up.');
         }
 
@@ -115,7 +128,58 @@ final class Mailer
             'password'   => (string) ($smtp['password'] ?? ''),
             'from_email' => (string) ($smtp['from_email'] ?? ''),
             'from_name'  => (string) ($smtp['from_name'] ?? ''),
+            'use_api'    => (bool) ($smtp['use_api'] ?? false),
+            'api_key'    => (string) ($smtp['api_key'] ?? ''),
         ];
+    }
+
+    // ----------------------------------------------------------------------------
+    // Send an email via the MailerSend HTTP API (POST to /v1/email).
+    // Uses curl over HTTPS, which works even when SMTP ports are blocked.
+    // ----------------------------------------------------------------------------
+    private static function sendViaApi(string $to, string $subject, string $htmlBody, array $cfg): bool
+    {
+        $payload = json_encode([
+            'from' => [
+                'email' => $cfg['from_email'],
+                'name'  => $cfg['from_name'],
+            ],
+            'to' => [
+                ['email' => $to],
+            ],
+            'subject' => $subject,
+            'html'    => $htmlBody,
+        ]);
+
+        $ch = curl_init('https://api.mailersend.com/v1/email');
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $payload,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_HTTPHEADER     => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $cfg['api_key'],
+            ],
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error    = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            throw new \RuntimeException('MailerSend API request failed: ' . $error);
+        }
+
+        // MailerSend returns 202 Accepted on success
+        if ($httpCode !== 202) {
+            $body = json_decode($response, true);
+            $msg  = $body['message'] ?? $response;
+            throw new \RuntimeException('MailerSend API error (' . $httpCode . '): ' . $msg);
+        }
+
+        return true;
     }
 
     // ----------------------------------------------------------------------------

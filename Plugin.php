@@ -352,6 +352,8 @@ class Plugin
     public static function apiSmtpSave(array $payload = []): void
     {
         $smtp = [
+            'use_api'      => !empty($payload['use_api']),
+            'api_key'      => trim((string) ($payload['api_key'] ?? '')),
             'host'         => trim((string) ($payload['host'] ?? '')),
             'port'         => (int) ($payload['port'] ?? 587),
             'encryption'   => (string) ($payload['encryption'] ?? 'tls'),
@@ -362,7 +364,12 @@ class Plugin
             'email_footer' => trim((string) ($payload['email_footer'] ?? '')),
         ];
 
-        if ($smtp['host'] === '') {
+        // Validate based on selected mode
+        if ($smtp['use_api'] && $smtp['api_key'] === '') {
+            editor_error_response('API key is required when using MailerSend Web API.', 400, 'saving SMTP settings');
+            return;
+        }
+        if (!$smtp['use_api'] && $smtp['host'] === '') {
             editor_error_response('SMTP host is required.', 400, 'saving SMTP settings');
             return;
         }
